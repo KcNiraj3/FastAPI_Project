@@ -1,9 +1,10 @@
-from unittest.mock import Base
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import Column, String, Boolean
-
-
+from sqlalchemy import Column, String, Boolean,Integer, create_engine
+from pydantic import BaseModel
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+from fastapi import Depends
 
 
  
@@ -13,7 +14,12 @@ app.add_middleware(
     CORSMiddleware
 )
 
-database_url = "sqlite.////"
+DATABASE_URL = "sqlite:///./project.db"
+engine = create_engine(DATABASE_URL)
+local_session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
 
 # #path parameter
 # @app.get("/{name}")
@@ -21,14 +27,43 @@ database_url = "sqlite.////"
 #     return {"message":f"Hello World !, {name}"}
 
 # query parameter - day & phone
-@app.get("/{name}")
-def index(name:str, day:str, phone:str):
-    return(f"{name}, {day}, {phone}")
+# @app.get("/{name}")
+# def index(name:str, day:str, phone:str):
+#     return(f"{name}, {day}, {phone}")
+
+def get_db():
+    db = local_session()
+    try: 
+        yield db
+    finally:
+        db.close
 
 class Task(Base):
-    __table__ = "tasks"
-    id = Column(String)
+    __tablename__ = "tasks"
+    id = Column(Integer, primary_key=True, index=True)
     title = Column(String)
     description = Column(String)
     is_completed = Column(Boolean)
+
+Base.metadata.create_all(bind=engine)
+
+# pydantic model
+class taskRequest(BaseModel):
+    title:str
+    description:str
+    is_completed:bool
+
+@app.post("/tasks/")  
+def create_tasks(task:taskRequest, db: Session = Depends(get_db)):
+    db_task = Task(**task.dict())
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
+    return db_task    
+
+
+@app.get("/tasks/{task_id}")  
+def get_tasks(task_id:int, db: Session = Depends(get_db)):
+    task = db.query(Task).filter(Task.id==task_id).first()
+    return task
 

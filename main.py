@@ -53,14 +53,33 @@ class taskRequest(BaseModel):
     description:str
     is_completed:bool
 
-@app.post("/tasks/")  
-def create_tasks(task:taskRequest, db: Session = Depends(get_db)):
-    db_task = Task(**task.dict())
-    db.add(db_task)
-    db.commit()
-    db.refresh(db_task)
-    return db_task    
+# #one task
+# @app.post("/tasks/")  
+# def create_tasks(task:taskRequest, db: Session = Depends(get_db)):
+#     db_task = Task(**task.dict())
+#     db.add(db_task)
+#     db.commit()
+#     db.refresh(db_task)
+#     return db_task   
 
+# create more than one task
+@app.post("/tasks/")  
+def create_tasks(tasks:list[taskRequest], db: Session = Depends(get_db)):
+    for db_task in tasks:
+        db_task = Task(**db_task.dict())
+        db.add(db_task)
+        db.commit()
+        db.refresh(db_task)
+    return db_task   
+
+
+#To get all tasks
+@app.get("/tasks/all")  
+def getAll_tasks( db: Session = Depends(get_db)):
+    tasks = db.query(Task).all() #select * from tasks
+    if not tasks:
+        return {"message":"Tasks not found"}
+    return tasks
 
 @app.get("/tasks/{task_id}")  
 def get_tasks(task_id:int, db: Session = Depends(get_db)):

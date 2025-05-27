@@ -65,6 +65,8 @@ def create_tasks(task:taskRequest, db: Session = Depends(get_db)):
 @app.get("/tasks/{task_id}")  
 def get_tasks(task_id:int, db: Session = Depends(get_db)):
     task = db.query(Task).filter(Task.id==task_id).first()
+    if not task:
+        return {"message":"Task not found"}
     return task
 
 @app.put("/tasks/{task_id}")  
@@ -75,6 +77,17 @@ def edit_tasks(task_id:int, task:taskRequest, db: Session = Depends(get_db)):
     _task.title = task.title
     _task.description = task.description
     _task.is_completed = task.is_completed
+    db.add(_task)
     db.commit()
     db.refresh(_task)
     return _task
+
+@app.delete("/tasks/{task_id}")  
+def delete_tasks(task_id:int, task:taskRequest, db: Session = Depends(get_db)):
+    _task = db.query(Task).filter(Task.id==task_id).first()
+    if not _task:
+        return {"error": "Task not found"}
+
+    db.delete(_task)
+    db.commit()
+    return {"message":"Task deleted sucessfully"}

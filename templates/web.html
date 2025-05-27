@@ -16,28 +16,7 @@
         <button type="submit">Add Task</button>
       </form>
       
-      <script>
-      document.getElementById('taskForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-      
-        const task = {
-          title: document.getElementById('title').value,
-          description: document.getElementById('description').value,
-          is_completed: document.getElementById('is_completed').checked
-        };
-      
-        const response = await fetch("http://127.0.0.1:8000/tasks/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify([task])  // Note: you're posting a list of tasks
-        });
-      
-        const result = await response.json();
-        console.log(result);
-      });
-      </script>
+     <script src="/static/main.js"></script>
       
 </body>
 </html>

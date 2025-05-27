@@ -7,10 +7,14 @@ from sqlalchemy.orm import sessionmaker, Session
 from fastapi import Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
+from fastapi.responses import FileResponse
 
 
  
 app = FastAPI() 
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware
@@ -21,6 +25,11 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/web", response_class=HTMLResponse)
 def _web(request: Request):
     return templates.TemplateResponse("web.html", {"request": request})
+
+@app.get("/list_tasks", response_class=HTMLResponse)
+def web(request: Request):
+    return templates.TemplateResponse("list_tasks.html", {"request": request})
+
 
 DATABASE_URL = "sqlite:///./project.db"
 engine = create_engine(DATABASE_URL)

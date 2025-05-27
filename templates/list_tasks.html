@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>List Tasks</title>
+</head>
+<body>
+  <h1>All Tasks</h1>
+  <button id="loadTasks">Load Tasks</button>
+  <ul id="taskList"></ul>
+
+  <script>
+    document.getElementById('loadTasks').addEventListener('click', async function() {
+      const response = await fetch("http://127.0.0.1:8000/tasks/all", {
+        method: "GET",
+        headers: { "Accept": "application/json" }
+      });
+
+      if (response.ok) {
+        const tasks = await response.json();
+        const ul = document.getElementById('taskList');
+        ul.innerHTML = '';  // Clear previous list
+
+        tasks.forEach(task => {
+          const li = document.createElement('li');
+          li.textContent = `${task.title} - ${task.description} - Completed: ${task.is_completed}`;
+          ul.appendChild(li);
+        });
+      } else {
+        alert("Failed to load tasks");
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,10 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import Column, String, Boolean,Integer, create_engine
 from pydantic import BaseModel
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from fastapi import Depends
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 
 
  
@@ -13,6 +15,12 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware
 )
+
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/web", response_class=HTMLResponse)
+def _web(request: Request):
+    return templates.TemplateResponse("web.html", {"request": request})
 
 DATABASE_URL = "sqlite:///./project.db"
 engine = create_engine(DATABASE_URL)

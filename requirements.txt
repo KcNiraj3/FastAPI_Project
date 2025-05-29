@@ -18,5 +18,9 @@ uvicorn==0.34.0
 Jinja2Templates
 sqlalchemy
 fastapi
+jinja2
+aiosqlite
+
+
 
 

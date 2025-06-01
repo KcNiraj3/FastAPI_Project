@@ -15,18 +15,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.future import select
 
 from typing import List
-import asyncio
+from fastapi import HTTPException
 
-DATABASE_URL = "sqlite+aiosqlite:///./project.db"
-engine = create_async_engine(DATABASE_URL, echo=True)
-AsyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_= AsyncSession)
-Base = declarative_base()
-
-
-# initialize database for async
-async def init_db():
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
+from db import AsyncSessionLocal, init_db
+from requests_models import taskRequest
+from response_models import TaskResponse
+from models import Task
+from fastapi import APIRouter
+from route import router
 
 
 # #path parameter
@@ -39,29 +35,21 @@ async def init_db():
 # def index(name:str, day:str, phone:str):
 #     return(f"{name}, {day}, {phone}")
 
-# model
-class Task(Base):
-    __tablename__ = "tasks"
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String)
-    description = Column(String)
-    is_completed = Column(Boolean, default=False)
 
+#router = APIRouter(prefix="/api")
 app = FastAPI() 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
-    CORSMiddleware
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    #ALLOW_METHODS=["GET"]
 )
 
-async def get_db():
-    async with AsyncSessionLocal() as db:
-    
-        try: 
-            yield db
-        finally:
-            #db.close
-            await db.close()
+app.include_router(router)
+
+
 
 # after app is created start
 @app.on_event("startup")
@@ -73,17 +61,10 @@ async def on_startup():
 
 # pydantic model for validation , pydantic also convert into json
 # Request for input -for put and post
-class taskRequest(BaseModel):
-    title:str
-    description:str
-    is_completed:bool
+
     
 # For output - get method , send data to client    
-class TaskResponse(BaseModel):
-    id: int = None #  If no value is provided, it will default to None
-    title:str = None
-    description:str = None
-    is_completed: bool = None    
+  
 
 templates = Jinja2Templates(directory="templates")
 
@@ -106,76 +87,5 @@ def web(request: Request):
 #     db.refresh(db_task)
 #     return db_task   
 
-# create more than one task
-@app.post("/tasks/", response_model=list[taskRequest])  
-async def create_tasks(tasks:list[taskRequest], db: AsyncSession = Depends(get_db)):
-    task_obj = [] # create task obj for async
-    for db_task in tasks:
-        db_task = Task(**db_task.dict())
-        db.add(db_task)
-        await db.commit()
-        await db.refresh(db_task)
-        task_obj.append(db_task) # add in database
-    return task_obj   
 
 
-#To get all tasks
-@app.get("/tasks/all") 
-#@app.get("/tasks/all", response_model=List[TaskSchema]) 
-async def getAll_tasks( session: AsyncSession = Depends(get_db)):
-    #tasks = await db.query(Task).all() #select * from tasks
-    result = await session.execute(select(Task))
-    tasks = result.scalars().all() # convert into data (reference) from object , if we do not pur scalar it will return only object
-    if not tasks:
-        return {"message":"Tasks not found"}
-    return [i for i in tasks]
-
-@app.get("/tasks/{task_id}", response_model=TaskResponse)  
-async def get_tasks(task_id:int, session: AsyncSession = Depends(get_db)):
-    _start = datetime.now()
-    query1 = session.execute(
-        select(Task).where(Task.id == task_id)
-    )
-    
-    query2 = session.execute(
-        select(Task)
-    )
-    
-    # asyncio.gather starts both queries at the same time
-    # saves time compared to awaiting them one by one
-    query1, query2 = await asyncio.gather(
-        query1,
-        query2
-    )
-    task1 = query1.scalar()
-    print(f"\n\n{query1}, {task1}")
-    _end = datetime.now()
-    print(f"\n\ntime_taken: {_end-_start}\n\n")
-    if not task1:
-        return TaskResponse()
-    print(task1)
-    return task1
-
-@app.put("/tasks/{task_id}")  
-async def edit_tasks(task_id:int, task:taskRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Task).where(Task.id == task_id))
-    _task = result.scalar_one_or_none()
-    if not _task:
-        return {"error": "Task not found"}
-    _task.title = task.title
-    _task.description = task.description
-    _task.is_completed = task.is_completed
-    db.add(_task)
-    await db.commit()
-    await db.refresh(_task)
-    return _task
-
-@app.delete("/tasks/{task_id}")  
-async def delete_tasks(task_id:int, task:taskRequest, db: AsyncSession = Depends(get_db)):
-    _task = db.query(Task).filter(Task.id==task_id).first()
-    if not _task:
-        return {"error": "Task not found"}
-
-    await db.delete(_task)
-    await db.commit()
-    return {"message":"Task deleted sucessfully"}

@@ -13,12 +13,11 @@ async def init_db():
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
         
-        
+# create Dependecies , fetch the data and close the connection        
 async def get_db():
-    async with AsyncSessionLocal() as db:
-    
+    async with AsyncSessionLocal() as db:    
         try: 
-            yield db
+            yield db # yield means return
         finally:
             #db.close
             await db.close()        

@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Path
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
@@ -9,6 +9,8 @@ from requests_models import taskRequest
 from response_models import TaskResponse
 import datetime
 import asyncio
+from typing import List
+from starlette import status
 
 router = APIRouter(prefix="/api")
 
@@ -26,10 +28,19 @@ async def create_tasks(tasks:list[taskRequest], db: AsyncSession = Depends(get_d
 
 
 #To get all tasks
+@router.get("/tasks/all") 
+#@router.get("/tasks/all", response_model=List[TaskResponse]) 
+async def getAll_tasks( session: AsyncSession = Depends(get_db)):
+    #tasks = await db.query(Task).all() #select * from tasks
+    result = await session.execute(select(Task))
+    tasks = result.scalars().all() # convert into data (reference) from object , if we do not put scalar it will return only object
+    if not tasks:
+        return {"message":"Tasks not found"}
+    return [i for i in tasks]
 
 
-@router.get("/tasks/{task_id}", response_model=TaskResponse)  
-async def get_tasks(task_id:int, session: AsyncSession = Depends(get_db)):
+@router.get("/tasks/{task_id}", response_model=TaskResponse, status_code=status.HTTP_200_OK)  
+async def get_tasks(task_id:int = Path(gt=0), session: AsyncSession = Depends(get_db)): # Depends is dependency injection
     _start = datetime.datetime.now()
     query1 = session.execute(
         select(Task).where(Task.id == task_id)
@@ -50,34 +61,28 @@ async def get_tasks(task_id:int, session: AsyncSession = Depends(get_db)):
     _end = datetime.datetime.now()
     print(f"\n\ntime_taken: {_end-_start}\n\n")
     if not task1:
-        return TaskResponse()
+        raise HTTPException(status_code=404, detail="Task not found")
     print(task1)
     return task1
 
-@router.get("/tasks/all") 
-#@app.get("/tasks/all", response_model=List[TaskSchema]) 
-async def getAll_tasks( session: AsyncSession = Depends(get_db)):
-    #tasks = await db.query(Task).all() #select * from tasks
-    result = await session.execute(select(Task))
-    tasks = result.scalars().all() # convert into data (reference) from object , if we do not pur scalar it will return only object
-    if not tasks:
-        return {"message":"Tasks not found"}
-    return [i for i in tasks]
 
 
-@router.put("/tasks/{task_id}")  
+@router.put("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)  
 async def edit_tasks(task_id:int, task:taskRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Task).where(Task.id == task_id))
     _task = result.scalar_one_or_none()
+    #if _task in None:
     if not _task:
-        return {"error": "Task not found"}
+        raise HTTPException(status_code=404, detail='Tasks not found')
     _task.title = task.title
     _task.description = task.description
+    _task.priority = task.priority
     _task.is_completed = task.is_completed
     db.add(_task)
     await db.commit()
     await db.refresh(_task)
     return _task
+
 
 @router.delete("/tasks/{task_id}")  
 async def delete_tasks(task_id:int, task:taskRequest, db: AsyncSession = Depends(get_db)):

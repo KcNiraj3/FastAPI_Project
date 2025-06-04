@@ -12,7 +12,8 @@ import asyncio
 from typing import List
 from starlette import status
 
-router = APIRouter(prefix="/api")
+#router = APIRouter(prefix="/api")
+router = APIRouter()
 
 # create more than one task
 @router.post("/tasks/", response_model=list[taskRequest])  

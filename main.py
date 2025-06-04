@@ -1,28 +1,11 @@
 import datetime
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import Column, String, Boolean,Integer, create_engine
-from pydantic import BaseModel
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from fastapi import Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-
-from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.future import select
-
-from typing import List
-from fastapi import HTTPException
-
-from db import AsyncSessionLocal, init_db
-from requests_models import taskRequest
-from response_models import TaskResponse
-from models import Task
-from fastapi import APIRouter
-from route import router
+from db import  init_db
+from routers import auth, task
 
 
 # #path parameter
@@ -47,7 +30,8 @@ app.add_middleware(
     #ALLOW_METHODS=["GET"]
 )
 
-app.include_router(router)
+app.include_router(auth.router)
+app.include_router(task.router)
 
 
 
@@ -78,14 +62,6 @@ def web(request: Request):
 
 
 
-# #one task
-# @app.post("/tasks/")  
-# def create_tasks(task:taskRequest, db: Session = Depends(get_db)):
-#     db_task = Task(**task.dict())
-#     db.add(db_task)
-#     db.commit()
-#     db.refresh(db_task)
-#     return db_task   
 
 
 

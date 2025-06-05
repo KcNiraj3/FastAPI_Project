@@ -9,13 +9,22 @@ from db import AsyncSessionLocal
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.future import select
-
+from jose import jwt, JWTError
+from datetime import timedelta, datetime, timezone
 
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 #router = APIRouter(prefix="/api")
 router = APIRouter()
 
+SECRET_KEY = '5e7b189afb0e38f4ddf82be00b8166092bd4f2f23f292369107d74d7de7c76ba'
+ALGORITHM = 'HS256'
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    
+    
 # create Dependecies , fetch the data and close the connection        
 async def get_db():
     async with AsyncSessionLocal() as db:    
@@ -24,7 +33,8 @@ async def get_db():
         finally:
             #db.close
             await db.close() 
-            
+
+# authenticate user            
 async def authenticate_user(username: str, password: str, db):
     #user = db.query(Users).filter(Users.username == username).first()
     result = await db.execute(select(Users).where(Users.username == username))
@@ -33,7 +43,13 @@ async def authenticate_user(username: str, password: str, db):
         return False
     if not bcrypt_context.verify(password, user.hashed_password):
         return False
-    return user            
+    return user 
+# authenticate token
+def create_access_token(username: str, user_id: int,  expires_delta: timedelta):
+    encode = {'sub': username, 'id': user_id}
+    expires = datetime.now(timezone.utc) + expires_delta
+    encode.update({'exp': expires})
+    return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)           
 
 class CreateUserRequest(BaseModel):
     username: str
@@ -61,8 +77,10 @@ async def create_user( create_user_request : CreateUserRequest, db: AsyncSession
     db.add(create_user_model)
     await db.commit()
     await db.refresh(create_user_model)
-    
-@router.post("/token")
+
+
+# route or geeting token    
+@router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                                  db: AsyncSession = Depends(get_db)):
 
@@ -70,4 +88,5 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail='Could not validate user.')
-    return {'access_token'}
+    token = create_access_token(user.username, user.id, timedelta(minutes=20))    
+    return {'access_token': token, 'token_type': 'bearer'}

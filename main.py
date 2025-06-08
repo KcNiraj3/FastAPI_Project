@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from db import  init_db
-from routers import auth, task
+from routers import auth, task, admin
 
 
 # #path parameter
@@ -32,6 +32,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(task.router)
+app.include_router(admin.router)
 
 
 

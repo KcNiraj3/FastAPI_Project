@@ -38,8 +38,10 @@ async def create_tasks(user:user_dependency, tasks:list[taskRequest], db: AsyncS
 @router.get("/tasks/all", status_code = status.HTTP_200_OK) 
 #@router.get("/tasks/all", response_model=List[TaskResponse]) 
 async def getAll_tasks(user:user_dependency, session: AsyncSession = Depends(get_db)):
+    if user is None:
+        raise HTTPException(status_code=401, detail='Authenticated Failed')
     #tasks = await db.query(Task).all() #select * from tasks
-    result = await session.execute(select(Task).where(Task.owner_id == user.get(id)))
+    result = await session.execute(select(Task).where(Task.owner_id == user.get("id")))
     tasks = result.scalars().all() # convert into data (reference) from object , if we do not put scalar it will return only object
     if not tasks:
         return {"message":"Tasks not found"}
@@ -77,7 +79,7 @@ async def get_tasks(user:user_dependency, task_id:int = Path(gt=0), session: Asy
 
 
 @router.put("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)  
-async def edit_tasks(user:user_dependency, task_id:int, task:taskRequest, db: AsyncSession = Depends(get_db)):
+async def edit_tasks(user:user_dependency, task:taskRequest, task_id:int = Path(gt=0) ,db: AsyncSession = Depends(get_db)):
     if user is None:
         raise HTTPException(status_code=401, detail='Authenticated Failed')
     result = await db.execute(select(Task).where(Task.id == task_id).where(Task.owner_id == user.get('id')))
@@ -96,8 +98,10 @@ async def edit_tasks(user:user_dependency, task_id:int, task:taskRequest, db: As
 
 
 @router.delete("/tasks/{task_id}")  
-async def delete_tasks(task_id:int, task:taskRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Task).where(Task.id == task_id))
+async def delete_tasks(user:user_dependency, task_id:int, task:taskRequest, db: AsyncSession = Depends(get_db)):
+    if user is None:
+        raise HTTPException(status_code=401, detail='Authenticated Failed')
+    result = await db.execute(select(Task).where(Task.id == task_id).where(Task.owner_id == user.get('id')))
     _task =  result.scalar_one_or_none()
     if not _task:
         raise HTTPException(status_code=404, detail="Task not found")

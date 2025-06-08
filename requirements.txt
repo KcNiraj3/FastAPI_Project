@@ -20,10 +20,11 @@ sqlalchemy
 fastapi
 jinja2
 aiosqlite
-passlib # for password hassing
-bcrypt==4.0.1 # for password hasing
-python-multipart #FOR SUBMITTING APPLICATION
-"python-jose[cryptography]" # jwt
+#passlib # for password hassing
+#bcrypt==4.0.1 # for password hasing
+#python-multipart #FOR SUBMITTING APPLICATION
+#python-jose[cryptography] # jwt
+
 
 
 

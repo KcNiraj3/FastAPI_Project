@@ -24,7 +24,8 @@ aiosqlite
 #bcrypt==4.0.1 # for password hasing
 #python-multipart #FOR SUBMITTING APPLICATION
 #python-jose[cryptography] # jwt
-
+#psycopg2-binary
+#asyncpg
 
 
 
